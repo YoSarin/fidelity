@@ -19,7 +19,7 @@ try:
     parser.add_argument('--year', type=int, help=('Year about which do you care. Default is last year (%s)' % lastYear), default=lastYear)
     parser.add_argument('--gross_income', type=int, help=('Gross income per given year'))
     parser.add_argument('--total_premium', type=int, help=('Total premiums written per given year (Úhrn povinného pojistného)'))
-    parser.add_argument('--generate_xls', action='store_true')
+    parser.add_argument('--generate_xls', action='store_true', help='Will generate xlsx file in same folder where script is located')
     parser.add_argument('--english', action='store_true', help=('If you want to generate xls in english, add this switch'))
     parser.add_argument('--password', action='store_true', help='Will show password prompt, even when you have your password stored in env variable (FIDELITY_PASSWORD)')
     parser.add_argument('--username', help=('Fidelity username (you can setup env variable instead - FIDELITY_USERNAME)'), default=username, required=(not username))
