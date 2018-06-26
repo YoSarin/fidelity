@@ -1,0 +1,23 @@
+{
+    "Employee income" : { "cs_cz": "Zaměstnanecké příjmy" },
+    "Source": { "cs_cz": "Zdroj" },
+    "Wage (Skype Czech Republic)": { "cs_cz": "Výplata (Skype Czech Republic)" },
+    "Stock awards (bonuses - shares)": { "cs_cz": "Stock awards (bonusy - akcie)" },
+    "ESPP (preferential purchase of employee shares)": { "cs_cz": "ESPP (zvýhodněný nákup zaměstnaneckých akcií)" },
+    "Total": { "cs_cz": "Celkem" },
+    "Gross income": { "cs_cz": "Hrubý příjem" },
+    "Total premiums written": { "cs_cz": "Úhrn povinného pojistného" },
+    "January": { "cs_cz": "Leden" },
+    "February": { "cs_cz": "Únor" },
+    "March": { "cs_cz": "Březen" },
+    "April": { "cs_cz": "Duben" },
+    "May": { "cs_cz": "Květen" },
+    "June": { "cs_cz": "Červen" },
+    "July": { "cs_cz": "Červenec" },
+    "August": { "cs_cz": "Srpen" },
+    "September": { "cs_cz": "Září" },
+    "October": { "cs_cz": "Říjen" },
+    "November": { "cs_cz": "Listopad" },
+    "December": { "cs_cz": "Prosinec" },
+    "" : {}
+}
