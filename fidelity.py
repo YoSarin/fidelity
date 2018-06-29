@@ -16,26 +16,36 @@ try:
 
     lastYear = datetime.today().year - 1
     parser = argparse.ArgumentParser(description="Fetch your data from fidelity and show them in CSV/other usefull formats needed to tax proclamation")
-    parser.add_argument('--year', type=int, help=('Year about which do you care. Default is last year (%s)' % lastYear), default=lastYear)
-    parser.add_argument('--gross_income', type=int, help=('Gross income per given year'))
-    parser.add_argument('--total_premium', type=int, help=('Total premiums written per given year (Úhrn povinného pojistného)'))
-    parser.add_argument('--generate_xls', action='store_true', help='Will generate xlsx file in same folder where script is located')
-    parser.add_argument('--english', action='store_true', help=('If you want to generate xls in english, add this switch'))
     parser.add_argument('--password', action='store_true', help='Will show password prompt, even when you have your password stored in env variable (FIDELITY_PASSWORD)')
     parser.add_argument('--username', help=('Fidelity username (you can setup env variable instead - FIDELITY_USERNAME)'), default=username, required=(not username))
     parser.add_argument('--accountID', help=('Fidelity accountID (you can setup env variable instead - FIDELITY_ACCOUNT_ID); check fidelity_account_id_security_id.png to see where to find it'), default=accountID, required=(not accountID))
     parser.add_argument('--securityID', help=('Fidelity securityID (you can setup env variable instead - FIDELITY_SECURITY_ID); check fidelity_account_id_security_id.png to see where to find it'), default=securityID, required=(not securityID))
+    subparsers = parser.add_subparsers(dest="action")
+
+    xlsSubParser = subparsers.add_parser('generate_xls', help='Will generate xlsx file in same folder where script is located')
+    xlsSubParser.add_argument('--year', type=int, help=('Year about which do you care. Default is last year (%s)' % lastYear), default=lastYear)
+    xlsSubParser.add_argument('--gross_income', type=int, help=('Gross income per given year'))
+    xlsSubParser.add_argument('--total_premium', type=int, help=('Total premiums written per given year (Úhrn povinného pojistného)'))
+    xlsSubParser.add_argument('--english', action='store_true', help=('If you want to generate xls in english, add this switch'))
+
+    sellSubParser = subparsers.add_parser('simulate_sell', help="Show how much money will you have to pay if you decide to sell your lots")
+    sellSubParser.add_argument('--expected_price', type=float, help="Expected price of shares at the moment of sell")
+    sellSubParser.add_argument('--expected_czk_usd', type=float, help="Expected CZK/USD exchange rate at the moment of sell")
+    sellSubParser.add_argument('--expected_additional_stocks', type=float, help="if you expect additional stocks to have at the time of sell, specify the amount here (they'll be counted into shares that needs to be taxed)")
+    sellSubParser.add_argument('--date', type=lambda d: datetime.strptime(d, '%Y-%m-%d'), help="Expected date of sell", default=datetime.now().strftime("%Y-%m-%d"))
+
     args = parser.parse_args()
 
     if (args.password or not password):
         password = getpass.getpass(prompt=("Fidelity password for user %s: " % username))
 
     open, closed = fetchData(args.username, password, args.accountID, args.securityID)
-
-    if (args.generate_xls):
-        from lib.taxes import CreateXLS
+    if (args.action == "generate_xls"):
+        from tasks.create_xls import CreateXLS
         CreateXLS(open.FilterByYear(args.year), closed.FilterByYear(args.year), "taxes_" + str(args.year), args.gross_income, args.total_premium)
-
+    elif args.action == "simulate_sell":
+        from tasks.sell_simulator import SellSimulator
+        SellSimulator(open, args.expected_price, args.date, args.expected_additional_stocks)
     else:
         print "\n".join(open.FilterByYear(args.year).csv())
         print closed

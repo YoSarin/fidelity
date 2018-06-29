@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import xlsxwriter
-from translator import _, setLang
-from lots import Source
 from enum import Enum
+
+from lib.translator import _, setLang
+from lib.lots import Source
 
 def CreateXLS(opened, closed, filename, grossIncome, totalPremium):
     setLang('cs_cz')

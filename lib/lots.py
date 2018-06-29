@@ -1,6 +1,7 @@
 from datetime import datetime
 import requests
 from enum import Enum
+import json
 
 class Source(Enum):
     ALL = "all"
@@ -49,6 +50,18 @@ class Lot:
                 return float(fields[4].replace(",","."))
 
         raise Exception("Currency %s not found in %s" % (otherCurrency, url))
+
+    @staticmethod
+    def CurrentMSFTPrice():
+        url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=W3RCAR8GFCZPPJI6"
+        stockData = json.loads(requests.get(url).content)
+        return float(stockData["Time Series (Daily)"][datetime.now().strftime("%Y-%m-%d")]["4. close"])
+
+    def TaxesIfSold(self, sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax):
+        yougestFreesellersDate = sellingDate.replace(year = sellingDate.year - minimalYearsToAvoidTaxes)
+        if self.acquisitionDate < yougestFreesellersDate:
+            return 0
+        return tax*(sellingPrice - self.priceReal)
 
 
     def czkUsdAtAcquisitionDate(self):
@@ -102,6 +115,43 @@ class Lots:
 
     def FilterBySource(self, source):
         return Lots([lot for lot in self.lots if lot.isFromSource(source)])
+
+    def TaxesIfSold(self, sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax, czkCourse, additionalStocks=0):
+        totalTaxes = (additionalStocks*sellingPrice - additionalStocks*Lot.CurrentMSFTPrice())*tax
+        totalTotal = additionalStocks*sellingPrice
+        quantity = additionalStocks
+        print "%s\t%s\t%s\t%s" % (
+            "{:10s}".format("Quantity (pcs)"),
+            "{:20s}".format("Selling price (czk)"),
+            "{:13s}".format("Taxes (czk)"),
+            "{:22s}".format("Gain after sell (czk)"),
+        )
+        if additionalStocks > 0:
+            print "%s\t%s\t%s\t%s" % (
+                "{:10.0f}".format(quantity),
+                "{:17.2f}".format(totalTotal*czkCourse),
+                "{:10.2f}".format(totalTaxes*czkCourse),
+                "{:19.2f}".format((totalTotal-totalTaxes)*czkCourse),
+            )
+        for lot in self.lots:
+            total = lot.quantity * sellingPrice
+            taxes = lot.TaxesIfSold(sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax)
+            print "%s\t%s\t%s\t%s" % (
+                "{:10.0f}".format(lot.quantity),
+                "{:17.2f}".format(total*czkCourse),
+                "{:10.2f}".format(taxes*czkCourse),
+                "{:19.2f}".format((total-taxes)*czkCourse),
+            )
+            totalTotal += total
+            totalTaxes += taxes
+            quantity += lot.quantity
+        print
+        print "%s\t%s\t%s\t%s" % (
+            "{:10.0f}".format(quantity),
+            "{:17.2f}".format(totalTotal*czkCourse),
+            "{:10.2f}".format(totalTaxes*czkCourse),
+            "{:19.2f}".format((totalTotal-totalTaxes)*czkCourse),
+        )
 
     def csv(self):
         out = []
