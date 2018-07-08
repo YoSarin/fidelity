@@ -55,7 +55,8 @@ class Lot:
     def CurrentMSFTPrice():
         url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=W3RCAR8GFCZPPJI6"
         stockData = json.loads(requests.get(url).content)
-        return float(stockData["Time Series (Daily)"][datetime.now().strftime("%Y-%m-%d")]["4. close"])
+        lastDate = sorted(stockData["Time Series (Daily)"].keys())[-1]
+        return float(stockData["Time Series (Daily)"][lastDate]["4. close"])
 
     def TaxesIfSold(self, sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax):
         yougestFreesellersDate = sellingDate.replace(year = sellingDate.year - minimalYearsToAvoidTaxes)
