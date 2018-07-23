@@ -122,9 +122,9 @@ class Lots:
         return Lots([lot for lot in self.lots if lot.isFromSource(source)])
 
     def TaxesIfSold(self, sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax, czkCourse, additionalStocks=0):
-        totalTaxes = (additionalStocks*sellingPrice - additionalStocks*Lot.CurrentMSFTPrice())*tax
-        totalTotal = additionalStocks*sellingPrice
-        totalAcquisitionPrice = totalTotal
+        totalTaxes = (additionalStocks*sellingPrice - additionalStocks*Lot.CurrentMSFTPrice())*tax*czkCourse
+        totalTotal = additionalStocks*sellingPrice * czkCourse
+        totalAcquisitionPrice = additionalStocks*Lot.CurrentMSFTPrice()*czkCourse
         quantity = additionalStocks
         print "%s\t%s\t%s\t%s\t%s" % (
             "{:10s}".format("Quantity (pcs)"),
@@ -136,10 +136,10 @@ class Lots:
         if additionalStocks > 0:
             print "%s\t%s\t%s\t%s\t%s" % (
                 "{:10.0f}".format(quantity),
-                "{:17.2f}".format(totalTotal*czkCourse),
-                "{:17.2f}".format(0),
-                "{:10.2f}".format(totalTaxes*czkCourse),
-                "{:19.2f}".format((totalTotal-totalTaxes)*czkCourse),
+                "{:17.2f}".format(totalTotal),
+                "{:17.2f}".format(totalTotal - totalAcquisitionPrice),
+                "{:10.2f}".format(totalTaxes),
+                "{:19.2f}".format((totalTotal-totalTaxes)),
             )
         for lot in self.lots:
             total = lot.quantity * sellingPrice * czkCourse
