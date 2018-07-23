@@ -45,7 +45,9 @@ try:
         CreateXLS(open.FilterByYear(args.year), closed.FilterByYear(args.year), "taxes_" + str(args.year), args.gross_income, args.total_premium)
     elif args.action == "simulate_sell":
         from tasks.sell_simulator import SellSimulator
-        SellSimulator(open, args.expected_price, args.date, args.expected_additional_stocks)
+        from lib.lots import Lot
+        expectedPrice = args.expected_price if args.expected_price else Lot.CurrentMSFTPrice()
+        SellSimulator(open, expectedPrice, args.date, args.expected_additional_stocks)
     else:
         print "\n".join(open.FilterByYear(args.year).csv())
         print closed

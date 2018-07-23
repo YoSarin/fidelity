@@ -14,6 +14,8 @@ class Source(Enum):
         return [Source.AWARD, Source.ESPP, Source.DIVIDEND]
 
 class Lot:
+    _currentMSFTPrice = None
+
     def __init__(self, data):
         self.acquisitionDate = datetime.strptime(data["acquisitionDate"], "%b/%d/%Y")
         self.quantity = float(data["quantity"].replace(",", "."))
@@ -53,16 +55,18 @@ class Lot:
 
     @staticmethod
     def CurrentMSFTPrice():
-        url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=W3RCAR8GFCZPPJI6"
-        stockData = json.loads(requests.get(url).content)
-        lastDate = sorted(stockData["Time Series (Daily)"].keys())[-1]
-        return float(stockData["Time Series (Daily)"][lastDate]["4. close"])
+        if Lot._currentMSFTPrice == None:
+            url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=W3RCAR8GFCZPPJI6"
+            stockData = json.loads(requests.get(url).content)
+            lastDate = sorted(stockData["Time Series (Daily)"].keys())[-1]
+            Lot._currentMSFTPrice = float(stockData["Time Series (Daily)"][lastDate]["4. close"])
+        return Lot._currentMSFTPrice
 
-    def TaxesIfSold(self, sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax):
+    def TaxesIfSold(self, sellingPrice, sellingCZKCourse, sellingDate, minimalYearsToAvoidTaxes, tax):
         yougestFreesellersDate = sellingDate.replace(year = sellingDate.year - minimalYearsToAvoidTaxes)
         if self.acquisitionDate < yougestFreesellersDate:
             return 0
-        return tax*(sellingPrice - self.priceReal)
+        return tax*self.quantity*(sellingPrice*sellingCZKCourse - self.priceReal*self.czkUsdAtAcquisitionDate())
 
 
     def czkUsdAtAcquisitionDate(self):
@@ -120,38 +124,45 @@ class Lots:
     def TaxesIfSold(self, sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax, czkCourse, additionalStocks=0):
         totalTaxes = (additionalStocks*sellingPrice - additionalStocks*Lot.CurrentMSFTPrice())*tax
         totalTotal = additionalStocks*sellingPrice
+        totalAcquisitionPrice = totalTotal
         quantity = additionalStocks
-        print "%s\t%s\t%s\t%s" % (
+        print "%s\t%s\t%s\t%s\t%s" % (
             "{:10s}".format("Quantity (pcs)"),
             "{:20s}".format("Selling price (czk)"),
+            "{:20s}".format("Buy/sell diff (czk)"),
             "{:13s}".format("Taxes (czk)"),
-            "{:22s}".format("Gain after sell (czk)"),
+            "{:22s}".format("Income after taxation (czk)"),
         )
         if additionalStocks > 0:
-            print "%s\t%s\t%s\t%s" % (
+            print "%s\t%s\t%s\t%s\t%s" % (
                 "{:10.0f}".format(quantity),
                 "{:17.2f}".format(totalTotal*czkCourse),
+                "{:17.2f}".format(0),
                 "{:10.2f}".format(totalTaxes*czkCourse),
                 "{:19.2f}".format((totalTotal-totalTaxes)*czkCourse),
             )
         for lot in self.lots:
-            total = lot.quantity * sellingPrice
-            taxes = lot.TaxesIfSold(sellingPrice, sellingDate, minimalYearsToAvoidTaxes, tax)
-            print "%s\t%s\t%s\t%s" % (
+            total = lot.quantity * sellingPrice * czkCourse
+            taxes = lot.TaxesIfSold(sellingPrice, czkCourse, sellingDate, minimalYearsToAvoidTaxes, tax)
+            acquisition = lot.quantity * lot.priceReal * lot.czkUsdAtAcquisitionDate()
+            print "%s\t%s\t%s\t%s\t%s" % (
                 "{:10.0f}".format(lot.quantity),
-                "{:17.2f}".format(total*czkCourse),
-                "{:10.2f}".format(taxes*czkCourse),
-                "{:19.2f}".format((total-taxes)*czkCourse),
+                "{:17.2f}".format(total),
+                "{:17.2f}".format(total - acquisition),
+                "{:10.2f}".format(taxes),
+                "{:19.2f}".format((total-taxes)),
             )
             totalTotal += total
             totalTaxes += taxes
+            totalAcquisitionPrice += acquisition
             quantity += lot.quantity
         print
-        print "%s\t%s\t%s\t%s" % (
+        print "%s\t%s\t%s\t%s\t%s" % (
             "{:10.0f}".format(quantity),
-            "{:17.2f}".format(totalTotal*czkCourse),
-            "{:10.2f}".format(totalTaxes*czkCourse),
-            "{:19.2f}".format((totalTotal-totalTaxes)*czkCourse),
+            "{:17.2f}".format(totalTotal),
+            "{:17.2f}".format(totalTotal - totalAcquisitionPrice),
+            "{:10.2f}".format(totalTaxes),
+            "{:19.2f}".format((totalTotal-totalTaxes)),
         )
 
     def csv(self):
