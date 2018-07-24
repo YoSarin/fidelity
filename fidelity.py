@@ -31,7 +31,7 @@ try:
     sellSubParser = subparsers.add_parser('simulate_sell', help="Show how much money will you have to pay if you decide to sell your lots")
     sellSubParser.add_argument('--expected_price', type=float, help="Expected price of shares at the moment of sell")
     sellSubParser.add_argument('--expected_czk_usd', type=float, help="Expected CZK/USD exchange rate at the moment of sell")
-    sellSubParser.add_argument('--expected_additional_stocks', type=float, help="if you expect additional stocks to have at the time of sell, specify the amount here (they'll be counted into shares that needs to be taxed)")
+    sellSubParser.add_argument('--expected_additional_stocks', type=float, help="if you expect additional stocks to have at the time of sell, specify the amount here (they'll be counted into shares that needs to be taxed)", default=0)
     sellSubParser.add_argument('--date', type=lambda d: datetime.strptime(d, '%Y-%m-%d'), help="Expected date of sell", default=datetime.now().strftime("%Y-%m-%d"))
 
     args = parser.parse_args()
