@@ -8,6 +8,7 @@ class Source(Enum):
     AWARD = "Award"
     ESPP = "ESPP"
     DIVIDEND = "Dividend"
+    UNKNOWN = "Unknown"
 
     @staticmethod
     def List():
@@ -20,6 +21,7 @@ class Lot:
         self.acquisitionDate = datetime.strptime(data["acquisitionDate"], "%b/%d/%Y")
         self.quantity = float(data["quantity"].replace(",", "."))
         self._czkUsdAtAcquisitionDate = None
+        self.source = Source.UNKNOWN
         if "shareSource" in data:
             if data["shareSource"] == "ESPP":
                 self.source = Source.ESPP

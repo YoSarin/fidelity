@@ -5,7 +5,7 @@ This python script gathers information about shares you've got in last year and 
 I am not responsible for your use of outputs of this script. If you want to use it for taxation purposes, you are doing so **on your own risk**.
 
 ## Usage
-Script is CLI tool, you need to have ```python2.7``` installed. All the requirements are in ```requirements.txt``` file, install them via pip (```pip install -r requirements.txt```).
+Script is CLI tool, you need to have ```python2.7``` installed. All the requirements are in ```requirements.txt``` file, install them via pip (```pip install -r requirements.txt --user```).
 ```
 $ ./fidelity.py -h
 usage: fidelity.py [-h] [--password] [--username USERNAME]
