@@ -20,6 +20,7 @@ try:
     parser.add_argument('--username', help=('Fidelity username (you can setup env variable instead - FIDELITY_USERNAME)'), default=username, required=(not username))
     parser.add_argument('--accountID', help=('Fidelity accountID (you can setup env variable instead - FIDELITY_ACCOUNT_ID); check fidelity_account_id_security_id.png to see where to find it'), default=accountID, required=(not accountID))
     parser.add_argument('--securityID', help=('Fidelity securityID (you can setup env variable instead - FIDELITY_SECURITY_ID); check fidelity_account_id_security_id.png to see where to find it'), default=securityID, required=(not securityID))
+    parser.add_argument('--reload', help=('You want to reload all the data?'), action="store_true")
     subparsers = parser.add_subparsers(dest="action")
 
     xlsSubParser = subparsers.add_parser('generate_xls', help='Will generate xlsx file in same folder where script is located')
@@ -34,23 +35,33 @@ try:
     sellSubParser.add_argument('--expected_additional_stocks', type=float, help="if you expect additional stocks to have at the time of sell, specify the amount here (they'll be counted into shares that needs to be taxed)", default=0)
     sellSubParser.add_argument('--date', type=lambda d: datetime.strptime(d, '%Y-%m-%d'), help="Expected date of sell", default=datetime.now().strftime("%Y-%m-%d"))
 
+    testSubParser = subparsers.add_parser('test')
+
     args = parser.parse_args()
 
-    if (args.password or not password):
-        password = getpass.getpass(prompt=("Fidelity password for user %s: " % username))
-
-    open, closed = fetchData(args.username, password, args.accountID, args.securityID)
-    if (args.action == "generate_xls"):
-        from tasks.create_xls import CreateXLS
-        CreateXLS(open.FilterByYear(args.year), closed.FilterByYear(args.year), "taxes_" + str(args.year), args.gross_income, args.total_premium)
-    elif args.action == "simulate_sell":
-        from tasks.sell_simulator import SellSimulator
-        from lib.lots import Lot
-        expectedPrice = args.expected_price if args.expected_price else Lot.CurrentMSFTPrice()
-        SellSimulator(open, expectedPrice, args.date, args.expected_additional_stocks)
+    if args.action == "test":
+        print "nothing to do"
     else:
-        print "\n".join(open.FilterByYear(args.year).csv())
-        print closed
+        if args.reload:
+            for file in ['fidelity.cache', "courses.cache"]:
+                if (os.path.exists(file)):
+                    os.remove(file)
+        if (args.password or not password):
+            password = getpass.getpass(prompt=("Fidelity password for user %s: " % username))
+
+        open, closed = fetchData(args.username, password, args.accountID, args.securityID)
+        if (args.action == "generate_xls"):
+            from tasks.create_xls import CreateXLS
+            CreateXLS(open.FilterByYear(args.year), closed.FilterByYear(args.year), "taxes_" + str(args.year), args.gross_income, args.total_premium)
+        elif args.action == "simulate_sell":
+            from tasks.sell_simulator import SellSimulator
+            from lib.lots import Lot
+            expectedPrice = args.expected_price if args.expected_price else Lot.CurrentMSFTPrice()
+            SellSimulator(open, expectedPrice, args.date, args.expected_additional_stocks)
+            Lot.SaveCoursesCache()
+        else:
+            print "\n".join(open.FilterByYear(args.year).csv())
+            print closed
 except ValueError as e:
     print "Troubles with fetching data - maybe too many attemps? Give fidelity a rest ;)"
     print traceback.print_exc()

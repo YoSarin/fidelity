@@ -2,6 +2,7 @@ from datetime import datetime
 import requests
 from enum import Enum
 import json
+import os.path
 
 class Source(Enum):
     ALL = "all"
@@ -16,6 +17,8 @@ class Source(Enum):
 
 class Lot:
     _currentMSFTPrice = None
+    _cachedCourses = {}
+    _cachedCoursesFile = "./courses.cache"
 
     def __init__(self, data):
         self.acquisitionDate = datetime.strptime(data["acquisitionDate"], "%b/%d/%Y")
@@ -43,17 +46,32 @@ class Lot:
 
     @staticmethod
     def CZK_price_at_date(date, otherCurrency="USD"):
-        url = "http://www.cnb.cz/cs/financni_trhy/devizovy_trh/kurzy_devizoveho_trhu/denni_kurz.txt?date=%s" % date.strftime("%d.%m.%Y")
-        courses = requests.get(url)
+        strDate = date.strftime("%d.%m.%Y")
+        if not Lot._cachedCourses:
+            if os.path.isfile(Lot._cachedCoursesFile):
+                with open(Lot._cachedCoursesFile) as file:
+                    Lot._cachedCourses = json.loads(file.read())
 
-        for dayCourse in courses.content.split("\n"):
-            fields = dayCourse.split('|')
-            if len(fields) < 5:
-                continue
-            if (fields[3] == otherCurrency):
-                return float(fields[4].replace(",","."))
+        if strDate not in Lot._cachedCourses:
+            url = "http://www.cnb.cz/cs/financni_trhy/devizovy_trh/kurzy_devizoveho_trhu/denni_kurz.txt?date=%s" % strDate
+            courses = requests.get(url)
+
+            for dayCourse in courses.content.split("\n"):
+                fields = dayCourse.split('|')
+                if len(fields) < 5:
+                    continue
+                if (fields[3] == otherCurrency):
+                    Lot._cachedCourses[strDate] = float(fields[4].replace(",","."))
+
+        if strDate in Lot._cachedCourses:
+            return Lot._cachedCourses[strDate]
 
         raise Exception("Currency %s not found in %s" % (otherCurrency, url))
+
+    @staticmethod
+    def SaveCoursesCache():
+        with open(Lot._cachedCoursesFile, "w") as file:
+            file.write(json.dumps(Lot._cachedCourses))
 
     @staticmethod
     def CurrentMSFTPrice():
@@ -128,43 +146,56 @@ class Lots:
         totalTotal = additionalStocks*sellingPrice * czkCourse
         totalAcquisitionPrice = additionalStocks*Lot.CurrentMSFTPrice()*czkCourse
         quantity = additionalStocks
-        print "%s\t%s\t%s\t%s\t%s" % (
+        avgBuyPrice = 0
+        print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+            "{:10s}".format("Acq. date"),
             "{:10s}".format("Quantity (pcs)"),
             "{:20s}".format("Selling price (czk)"),
             "{:20s}".format("Buy/sell diff (czk)"),
             "{:13s}".format("Taxes (czk)"),
-            "{:22s}".format("Income after taxation (czk)"),
+            "{:30s}".format("Income after taxation (czk)"),
+            "{:20s}".format("Buy/Sell"),
         )
         if additionalStocks > 0:
-            print "%s\t%s\t%s\t%s\t%s" % (
+            print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+                "{:10s}".format("N/A"),
                 "{:10.0f}".format(quantity),
                 "{:17.2f}".format(totalTotal),
                 "{:17.2f}".format(totalTotal - totalAcquisitionPrice),
                 "{:10.2f}".format(totalTaxes),
-                "{:19.2f}".format((totalTotal-totalTaxes)),
+                "{:27.2f}".format((totalTotal-totalTaxes)),
+                "{:7.2f}/{:.2f}".format(sellingPrice, sellingPrice),
             )
+            avgBuyPrice = sellingPrice
         for lot in self.lots:
             total = lot.quantity * sellingPrice * czkCourse
             taxes = lot.TaxesIfSold(sellingPrice, czkCourse, sellingDate, minimalYearsToAvoidTaxes, tax)
             acquisition = lot.quantity * lot.priceReal * lot.czkUsdAtAcquisitionDate()
-            print "%s\t%s\t%s\t%s\t%s" % (
+            print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+                "{:10s}".format(lot.acquisitionDate.strftime("%Y-%m-%d")),
                 "{:10.0f}".format(lot.quantity),
                 "{:17.2f}".format(total),
                 "{:17.2f}".format(total - acquisition),
                 "{:10.2f}".format(taxes),
-                "{:19.2f}".format((total-taxes)),
+                "{:27.2f}".format((total-taxes)),
+                "{:7.2f}/{:.2f}".format(lot.priceReal, sellingPrice),
             )
+
+            avgBuyPrice = ((avgBuyPrice*quantity) + (lot.priceReal*lot.quantity))/(quantity+lot.quantity)
+
             totalTotal += total
             totalTaxes += taxes
             totalAcquisitionPrice += acquisition
             quantity += lot.quantity
         print
-        print "%s\t%s\t%s\t%s\t%s" % (
+        print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+            "{:10s}".format("-"),
             "{:10.0f}".format(quantity),
             "{:17.2f}".format(totalTotal),
             "{:17.2f}".format(totalTotal - totalAcquisitionPrice),
             "{:10.2f}".format(totalTaxes),
-            "{:19.2f}".format((totalTotal-totalTaxes)),
+            "{:27.2f}".format((totalTotal-totalTaxes)),
+            "{:7.2f}/{:.2f}".format(avgBuyPrice, sellingPrice),
         )
 
     def csv(self):
