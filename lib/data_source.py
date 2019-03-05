@@ -39,7 +39,7 @@ def fetchData(username, password, accountID, securityID):
                 }).content
 
             openData = (json.loads(openLotsRaw))["data"]["openLotsRecords"]
-            closedData = (json.loads(openLotsRaw))["data"]["openLotsRecords"]
+            closedData = (json.loads(closedLotsRaw))["data"]["closedLotsRecords"]
 
             data = {"openLots":openData, "closedLots":closedData}
             with open(cachedFileName, "w") as file:

@@ -50,8 +50,8 @@ def CreateXLS(opened, closed, filename, grossIncome, totalPremium):
     for source in Source.List():
         if source == Source.DIVIDEND:
             continue
-        lots = opened.FilterBySource(source).lots
-        ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots)), row + 0 + 1), _(source), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
+        lots = opened.FilterBySource(source).lots + closed.FilterBySource(source).lots
+        ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots)), row + 0 + 1), _(source.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
         ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
         ws.write(row+2, 0, _(u"Počet akcií"))
         ws.write(row+3, 0, _(u"Obchodní cena akcie (USD)"))
@@ -71,7 +71,7 @@ def CreateXLS(opened, closed, filename, grossIncome, totalPremium):
                 border = Format.Right
             colLetter = chr(ord('A') + col)
 
-            ws.write(row+1, col, _("Stock") + " - " + str(lot.source) + " - " + _(lot.acquisitionDate.strftime("%B")), f.F(border))
+            ws.write(row+1, col, _("Stock") + " - " + str(lot.source.value) + " - " + _(lot.acquisitionDate.strftime("%B")), f.F(border))
             ws.write(row+2, col, lot.quantity, f.F(border))
             ws.write(row+3, col, lot.priceReal, f.F(Format.USD, border))
             ws.write(row+4, col, lot.pricePaid, f.F(Format.USD, border))
@@ -94,7 +94,7 @@ def CreateXLS(opened, closed, filename, grossIncome, totalPremium):
         row += 11
 
     dividentsInMonths = ["March", "June", "September", "December"]
-    ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(dividentsInMonths) + 1), row + 0 + 1), _(Source.DIVIDEND), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
+    ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(dividentsInMonths) + 1), row + 0 + 1), _(Source.DIVIDEND.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
     ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
     ws.write(row+2, 0, _(u"Příjem v USD"))
     ws.write(row+3, 0, _(u"Strženo na US daních"))
@@ -112,7 +112,7 @@ def CreateXLS(opened, closed, filename, grossIncome, totalPremium):
             border = Format.LightRight
         colLetter = chr(ord('A') + col)
 
-        ws.write(row+1, col, _(Source.DIVIDEND) + " - " + _(month), f.F(border))
+        ws.write(row+1, col, _(Source.DIVIDEND.value) + " - " + _(month), f.F(border))
         ws.write(row+2, col, _("FILL IN"), f.F(Format.USD, border))
         ws.write(row+3, col, _("FILL IN"), f.F(Format.USD, border))
         ws.write(row+4, col, _("FILL IN"), f.F(Format.Date, border))
