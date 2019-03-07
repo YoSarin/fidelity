@@ -19,6 +19,8 @@ class Lot:
     _currentMSFTPrice = None
     _cachedCourses = {}
     _cachedCoursesFile = "./courses.cache"
+    _cachedStockPrices = None
+    _cachedStockPriceFile = "./stocks.cache"
 
     def __init__(self, data):
         self.acquisitionDate = datetime.strptime(data["acquisitionDate"], "%b/%d/%Y")
@@ -32,13 +34,27 @@ class Lot:
                 self.source = Source.AWARD
             else:
                 self.source = Source.DIVIDEND
+        else:
+            fmv = Lot.MSFTPriceAtDate(datetime.strptime(data["acquisitionDate"], "%b/%d/%Y"))*self.quantity
+            cost = float(data["costBasis"]["basisAmount"].replace(",", ""))
+            ratio = round(cost/fmv, 1)
+            if ratio == 0.9:
+                self.source = Source.ESPP
+            elif self.acquisitionDate.month in [3, 6, 9, 12] and 5 < self.acquisitionDate.day < 25:
+                # dividends comes at march, june, september and december, somewhat around middle of the month
+                self.source = Source.DIVIDEND
+            else:
+                # awards are granted at february, may, august and november, last day of month. When there are hollidays at the end of the month, they will come first working day after that
+                self.source = Source.AWARD
+
+            # print self.acquisitionDate, self.quantity, ratio, self.source.value
 
         if self.isESPP():
-            self.pricePaid = float(data["costBasisShare"]["basisPerShare"].replace(",", "."))
+            self.pricePaid = float(data["costBasis"]["basisAmount"].replace(",", ""))/self.quantity
             self.priceReal = 100 * (self.pricePaid / 90)
         elif self.isAward() or self.isBoughtByDivident():
             self.pricePaid = 0
-            self.priceReal = float(data["costBasisShare"]["basisPerShare"].replace(",", "."))
+            self.priceReal = float(data["costBasis"]["basisAmount"].replace(",", ""))/self.quantity
 
     @staticmethod
     def Headers():
@@ -76,11 +92,29 @@ class Lot:
     @staticmethod
     def CurrentMSFTPrice():
         if Lot._currentMSFTPrice == None:
-            url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=W3RCAR8GFCZPPJI6"
-            stockData = json.loads(requests.get(url).content)
-            lastDate = sorted(stockData["Time Series (Daily)"].keys())[-1]
-            Lot._currentMSFTPrice = float(stockData["Time Series (Daily)"][lastDate]["4. close"])
+            lastDate = sorted(Lot.MSFTPrices().keys())[-1]
+            Lot._currentMSFTPrice = float(Lot.MSFTPrices()[lastDate])
         return Lot._currentMSFTPrice
+
+    @staticmethod
+    def MSFTPriceAtDate(date):
+        return Lot.MSFTPrices()[date.strftime("%Y-%m-%d")]
+
+    @staticmethod
+    def MSFTPrices():
+        if not Lot._cachedStockPrices:
+            if not os.path.isfile(Lot._cachedStockPriceFile):
+                url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&outputsize=full&apikey=W3RCAR8GFCZPPJI6"
+                stockData = json.loads(requests.get(url).content)
+                with open(Lot._cachedStockPriceFile, "w") as file:
+                    values = dict([(key, float(stockData["Time Series (Daily)"][key]["4. close"])) for key in stockData["Time Series (Daily)"]])
+                    file.write(json.dumps(values))
+                    Lot._cachedStockPrices = values
+            else:
+                with open(Lot._cachedStockPriceFile, "r") as file:
+                    Lot._cachedStockPrices = json.loads(file.read())
+        return Lot._cachedStockPrices
+
 
     def TaxesIfSold(self, sellingPrice, sellingCZKCourse, sellingDate, minimalYearsToAvoidTaxes, tax):
         yougestFreesellersDate = sellingDate.replace(year = sellingDate.year - minimalYearsToAvoidTaxes)

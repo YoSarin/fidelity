@@ -6,6 +6,7 @@ import getpass
 import traceback
 from datetime import datetime
 from lib.data_source import *
+from lib.clean_cache import *
 
 
 try:
@@ -42,10 +43,9 @@ try:
     if args.action == "test":
         print "nothing to do"
     else:
+        cleanCache()
         if args.reload:
-            for file in ['fidelity.cache', "courses.cache"]:
-                if (os.path.exists(file)):
-                    os.remove(file)
+            cleanCache(true)
         if (args.password or not password):
             password = getpass.getpass(prompt=("Fidelity password for user %s: " % username))
 

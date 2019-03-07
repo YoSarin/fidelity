@@ -3,9 +3,22 @@
 
 import xlsxwriter
 from enum import Enum
+from copy import copy, deepcopy
 
 from lib.translator import _, setLang
 from lib.lots import Source
+
+def groupByDate(lots):
+    output = {}
+    for lot in lots:
+        if lot.acquisitionDate in output and round(lot.pricePaid, 2) == round(output[lot.acquisitionDate].pricePaid, 2):
+            output[lot.acquisitionDate].quantity += lot.quantity
+        elif lot.acquisitionDate in output:
+            raise Exception("Two acquision at same date, with different price per share (%f != %f)".format(lot.pricePaid, output[lot.acquisitionDate].pricePaid))
+        else:
+            output[lot.acquisitionDate] = deepcopy(lot)
+
+    return sorted([output[date] for date in output], key = lambda x: x.acquisitionDate.strftime("%Y-%m-%d"), reverse=True)
 
 def CreateXLS(opened, closed, filename, grossIncome, totalPremium):
     setLang('cs_cz')
@@ -48,88 +61,88 @@ def CreateXLS(opened, closed, filename, grossIncome, totalPremium):
 
     row = 9
     for source in Source.List():
-        if source == Source.DIVIDEND:
-            continue
-        lots = opened.FilterBySource(source).lots + closed.FilterBySource(source).lots
-        ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots)), row + 0 + 1), _(source.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
-        ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
-        ws.write(row+2, 0, _(u"Počet akcií"))
-        ws.write(row+3, 0, _(u"Obchodní cena akcie (USD)"))
-        ws.write(row+4, 0, _(u"Nákupní cena akcie (USD)"))
-        ws.write(row+5, 0, _(u"Příjem v USD"))
-        ws.write(row+6, 0, _(u"Strženo na US daních"))
-        ws.write(row+7, 0, _(u"Datum"))
-        ws.write(row+8, 0, _(u"Použitý kurz CZK/USD"))
-        ws.write(row+9, 0, _(u"Příjem v Kč"))
-        col = 1
-        colLetter = chr(ord('A') + col)
-        for lot in reversed(lots):
-            border = None
-            if col == 1:
-                border = Format.Left
-            elif col == (1 + len(lots) - 1):
-                border = Format.Right
+        lots = groupByDate(opened.FilterBySource(source).lots + closed.FilterBySource(source).lots)
+        if source != Source.DIVIDEND:
+            ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots)), row + 0 + 1), _(source.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
+            ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
+            ws.write(row+2, 0, _(u"Počet akcií"))
+            ws.write(row+3, 0, _(u"Obchodní cena akcie (USD)"))
+            ws.write(row+4, 0, _(u"Nákupní cena akcie (USD)"))
+            ws.write(row+5, 0, _(u"Příjem v USD"))
+            ws.write(row+6, 0, _(u"Strženo na US daních"))
+            ws.write(row+7, 0, _(u"Datum"))
+            ws.write(row+8, 0, _(u"Použitý kurz CZK/USD"))
+            ws.write(row+9, 0, _(u"Příjem v Kč"))
+            col = 1
             colLetter = chr(ord('A') + col)
+            for lot in reversed(lots):
+                border = None
+                if col == 1:
+                    border = Format.Left
+                elif col == (1 + len(lots) - 1):
+                    border = Format.Right
+                colLetter = chr(ord('A') + col)
 
-            ws.write(row+1, col, _("Stock") + " - " + str(lot.source.value) + " - " + _(lot.acquisitionDate.strftime("%B")), f.F(border))
-            ws.write(row+2, col, lot.quantity, f.F(border))
-            ws.write(row+3, col, lot.priceReal, f.F(Format.USD, border))
-            ws.write(row+4, col, lot.pricePaid, f.F(Format.USD, border))
-            ws.write(row+5, col, "=%s%s*(%s%s-%s%s)" % (colLetter, row+2+1, colLetter, row+3+1, colLetter, row+4+1), f.F(Format.USD, border))
-            ws.write(row+6, col, 0, f.F(Format.USD, border))
-            ws.write(row+7, col, lot.acquisitionDate, f.F(Format.Date, border))
-            ws.write(row+8, col, lot.czkUsdAtAcquisitionDate(), f.F(Format.CZK_USD, border))
-            finalFormat = f.F(Format.Green, Format.CZK, Format.Result, Format.Bottom, border)
+                ws.write(row+1, col, _("Stock") + " - " + str(lot.source.value) + " - " + _(lot.acquisitionDate.strftime("%B")), f.F(border))
+                ws.write(row+2, col, lot.quantity, f.F(border))
+                ws.write(row+3, col, lot.priceReal, f.F(Format.USD, border))
+                ws.write(row+4, col, lot.pricePaid, f.F(Format.USD, border))
+                ws.write(row+5, col, "=%s%s*(%s%s-%s%s)" % (colLetter, row+2+1, colLetter, row+3+1, colLetter, row+4+1), f.F(Format.USD, border))
+                ws.write(row+6, col, 0, f.F(Format.USD, border))
+                ws.write(row+7, col, lot.acquisitionDate, f.F(Format.Date, border))
+                ws.write(row+8, col, lot.czkUsdAtAcquisitionDate(), f.F(Format.CZK_USD, border))
+                finalFormat = f.F(Format.Green, Format.CZK, Format.Result, Format.Bottom, border)
+                if source == Source.ESPP:
+                    finalFormat = f.F(Format.Blue, Format.CZK, Format.Result, Format.Bottom, border)
+                ws.write(row+9, col, "=%s%s*%s%s" % (colLetter, row+5+1, colLetter, row+8+1), finalFormat)
+                col += 1
+
+            range = "B%s:%s%s" % (row+9+1, colLetter, row+9+1)
             if source == Source.ESPP:
-                finalFormat = f.F(Format.Blue, Format.CZK, Format.Result, Format.Bottom, border)
-            ws.write(row+9, col, "=%s%s*%s%s" % (colLetter, row+5+1, colLetter, row+8+1), finalFormat)
-            col += 1
+                ws.write('B6', "=SUM(%s)" % range, f.F(Format.Blue, Format.CZK))
+            else:
+                ws.write('B5', "=SUM(%s)" % range, f.F(Format.Green, Format.CZK))
 
-        range = "B%s:%s%s" % (row+9+1, colLetter, row+9+1)
-        if source == Source.ESPP:
-            ws.write('B6', "=SUM(%s)" % range, f.F(Format.Blue, Format.CZK))
+            row += 11
         else:
-            ws.write('B5', "=SUM(%s)" % range, f.F(Format.Green, Format.CZK))
+            ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots) + 1), row + 0 + 1), _(Source.DIVIDEND.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
+            ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
+            ws.write(row+2, 0, _(u"Příjem v USD"))
+            ws.write(row+3, 0, _(u"Strženo na US daních"))
+            ws.write(row+4, 0, _(u"Datum"))
+            ws.write(row+5, 0, _(u"Použitý kurz CZK/USD"))
+            ws.write(row+6, 0, _(u"Strženo na US daních (CZK)"))
+            ws.write(row+7, 0, _(u"Příjem v Kč (před US zdaněním)"))
 
-        row += 11
+            col = 1
+            for lot in lots:
+                border = None
+                if col == 1:
+                    border = Format.Left
+                if col == (1 + len(lots) - 1):
+                    border = Format.LightRight
+                colLetter = chr(ord('A') + col)
 
-    dividentsInMonths = ["March", "June", "September", "December"]
-    ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(dividentsInMonths) + 1), row + 0 + 1), _(Source.DIVIDEND.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
-    ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
-    ws.write(row+2, 0, _(u"Příjem v USD"))
-    ws.write(row+3, 0, _(u"Strženo na US daních"))
-    ws.write(row+4, 0, _(u"Datum"))
-    ws.write(row+5, 0, _(u"Použitý kurz CZK/USD"))
-    ws.write(row+6, 0, _(u"Strženo na US daních (CZK)"))
-    ws.write(row+7, 0, _(u"Příjem v Kč (před US zdaněním)"))
+                ws.write(row+1, col, _("Stock") + " - " + str(lot.source.value) + " - " + _(lot.acquisitionDate.strftime("%B")), f.F(border))
+                ws.write(row+2, col, _((100/85)*(lot.quantity*(lot.priceReal - lot.pricePaid))), f.F(Format.USD, border)) # 15% taxes were already paid upfront
+                ws.write(row+3, col, "=%s%s*0.15" % (colLetter, row+2+1), f.F(Format.USD, border))
+                ws.write(row+4, col, _(lot.acquisitionDate), f.F(Format.Date, border))
+                ws.write(row+5, col, _(lot.czkUsdAtAcquisitionDate()), f.F(Format.CZK_USD, border))
+                ws.write(row+6, col, "=%s%s*%s%s" % (colLetter, row+3+1, colLetter, row+5+1), f.F(Format.CZK, border))
+                finalFormat = f.F(Format.Yellow, Format.CZK, Format.Result, Format.Bottom, border)
+                ws.write(row+7, col, "=%s%s*%s%s" % (colLetter, row+2+1, colLetter, row+5+1), finalFormat)
+                col += 1
 
-    col = 1
-    for month in dividentsInMonths:
-        border = None
-        if col == 1:
-            border = Format.Left
-        if col == (1 + len(dividentsInMonths) - 1):
-            border = Format.LightRight
-        colLetter = chr(ord('A') + col)
+                ws.write(row+1, col, _("Total"), f.F(Format.Right, Format.Yellow))
+                ws.write(row+2, col, "=SUM(B%s:%s%s)" % (row+2+1, colLetter, row+2+1), f.F(Format.USD, Format.Right, Format.Yellow))
+                ws.write(row+3, col, "=SUM(B%s:%s%s)" % (row+3+1, colLetter, row+3+1), f.F(Format.USD, Format.Right, Format.Yellow))
+                ws.write(row+4, col, "", f.F(Format.Date, Format.Right, Format.Yellow))
+                ws.write(row+5, col, "", f.F(Format.CZK_USD, Format.Right, Format.Yellow))
+                ws.write(row+6, col, "=SUM(B%s:%s%s)" % (row+6+1, colLetter, row+6+1), f.F(Format.CZK, Format.Right, Format.Yellow))
+                finalFormat = f.F(Format.Yellow, Format.CZK, Format.Result, Format.Bottom, Format.Right)
+                ws.write(row+7, col, "=SUM(B%s:%s%s)" % (row+7+1, colLetter, row+7+1), finalFormat)
 
-        ws.write(row+1, col, _(Source.DIVIDEND.value) + " - " + _(month), f.F(border))
-        ws.write(row+2, col, _("FILL IN"), f.F(Format.USD, border))
-        ws.write(row+3, col, _("FILL IN"), f.F(Format.USD, border))
-        ws.write(row+4, col, _("FILL IN"), f.F(Format.Date, border))
-        ws.write(row+5, col, _("FILL IN"), f.F(Format.CZK_USD, border))
-        ws.write(row+6, col, "=%s%s*%s%s" % (colLetter, row+3+1, colLetter, row+5+1), f.F(Format.CZK, border))
-        finalFormat = f.F(Format.Yellow, Format.CZK, Format.Result, Format.Bottom, border)
-        ws.write(row+7, col, "=%s%s*%s%s" % (colLetter, row+2+1, colLetter, row+5+1), finalFormat)
-        col += 1
-
-    ws.write(row+1, col, _("Total"), f.F(Format.Right, Format.Yellow))
-    ws.write(row+2, col, "=SUM(B%s:%s%s)" % (row+2+1, colLetter, row+2+1), f.F(Format.USD, Format.Right, Format.Yellow))
-    ws.write(row+3, col, "=SUM(B%s:%s%s)" % (row+3+1, colLetter, row+3+1), f.F(Format.USD, Format.Right, Format.Yellow))
-    ws.write(row+4, col, "", f.F(Format.Date, Format.Right, Format.Yellow))
-    ws.write(row+5, col, "", f.F(Format.CZK_USD, Format.Right, Format.Yellow))
-    ws.write(row+6, col, "=SUM(B%s:%s%s)" % (row+6+1, colLetter, row+6+1), f.F(Format.CZK, Format.Right, Format.Yellow))
-    finalFormat = f.F(Format.Yellow, Format.CZK, Format.Result, Format.Bottom, Format.Right)
-    ws.write(row+7, col, "=SUM(B%s:%s%s)" % (row+7+1, colLetter, row+7+1), finalFormat)
+            row += 9
 
     wb.close()
 
