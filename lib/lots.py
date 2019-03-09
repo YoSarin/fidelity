@@ -58,7 +58,7 @@ class Lot:
 
     @staticmethod
     def Headers():
-        return ["acquisitionDate", "pricePaid", "priceReal", "quantity", "source", "czkUsdAtAcquisitionDate"]
+        return ["type", "acquisitionDate", "pricePaid", "priceReal", "quantity", "source", "czkUsdAtAcquisitionDate"]
 
     @staticmethod
     def CZK_price_at_date(date, otherCurrency="USD"):
@@ -145,12 +145,16 @@ class Lot:
         return False
 
     def csv(self):
+        return self._csv("open")
+
+    def _csv(self, type):
         fields = [
+            type,
             self.acquisitionDate.date().isoformat(),
             str(self.pricePaid),
             str(self.priceReal),
             str(self.quantity) ,
-            self.source,
+            self.source.value,
             str(self.czkUsdAtAcquisitionDate())
         ]
 
@@ -159,6 +163,20 @@ class Lot:
 class ClosedLot(Lot):
     def __init__(self, data):
         Lot.__init__(self, data)
+        self.sellDate = datetime.strptime(data["holdingPeriodDate"], "%b/%d/%Y")
+        self.sellPrice = float(data["proceeds"]["proceeds"].replace(",", ""))/self.quantity
+        self._czkUsdAtSellDate = None
+
+    def czkUsdAtSellDate(self):
+        if self._czkUsdAtSellDate == None:
+            self._czkUsdAtSellDate = Lot.CZK_price_at_date(self.sellDate, "USD")
+        return self._czkUsdAtSellDate
+
+    def TaxApplicable(self):
+        return (self.acquisitionDate >= self.sellDate.replace(year = self.sellDate.year - 3))
+
+    def csv(self):
+        return self._csv("closed")
 
 class Lots:
     def __init__(self, data, closed=False):
@@ -169,7 +187,7 @@ class Lots:
         else:
             self.lots = [Lot(row) for row in data]
 
-    def FilterByYear(self, year):
+    def BoughtInYear(self, year):
         return Lots([lot for lot in self.lots if lot.acquisitionDate.year == year])
 
     def FilterBySource(self, source):
@@ -242,3 +260,6 @@ class Lots:
 class ClosedLots(Lots):
     def __init__(self, data):
         Lots.__init__(self, data, True)
+
+    def SoldInYear(self, year):
+        return ClosedLots([lot for lot in self.lots if lot.sellDate.year == year])

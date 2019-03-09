@@ -52,7 +52,7 @@ try:
         open, closed = fetchData(args.username, password, args.accountID, args.securityID)
         if (args.action == "generate_xls"):
             from tasks.create_xls import CreateXLS
-            CreateXLS(open.FilterByYear(args.year), closed.FilterByYear(args.year), "taxes_" + str(args.year), args.gross_income, args.total_premium)
+            CreateXLS(open.BoughtInYear(args.year), closed.BoughtInYear(args.year), closed.SoldInYear(args.year), "taxes_" + str(args.year), args.gross_income, args.total_premium)
         elif args.action == "simulate_sell":
             from tasks.sell_simulator import SellSimulator
             from lib.lots import Lot
@@ -60,7 +60,7 @@ try:
             SellSimulator(open, expectedPrice, args.date, args.expected_additional_stocks)
             Lot.SaveCoursesCache()
         else:
-            print "\n".join(open.FilterByYear(args.year).csv())
+            print "\n".join(open.BoughtInYear(args.year).csv() + closed.BoughtInYear(args.year).csv())
             print closed
 except ValueError as e:
     print "Troubles with fetching data - maybe too many attemps? Give fidelity a rest ;)"
