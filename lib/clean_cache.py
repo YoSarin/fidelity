@@ -2,7 +2,7 @@ from lots import *
 from datetime import datetime
 
 def cleanCache(force = False):
-    cacheFiles = [Lot._cachedCoursesFile, Lot._cachedStockPriceFile, "./fidelity.cache"]
+    cacheFiles = [Lot._cachedCoursesFile, Lot._cachedStockPriceFile]
     now = datetime.now()
     for filename in cacheFiles:
         if (not os.path.exists(filename)):

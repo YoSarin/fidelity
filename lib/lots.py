@@ -18,9 +18,9 @@ class Source(Enum):
 class Lot:
     _currentMSFTPrice = None
     _cachedCourses = {}
-    _cachedCoursesFile = "./courses.cache"
+    _cachedCoursesFile = "./data/courses.cache"
     _cachedStockPrices = None
-    _cachedStockPriceFile = "./stocks.cache"
+    _cachedStockPriceFile = "./data/stocks.cache"
 
     def __init__(self, data):
         self.acquisitionDate = datetime.strptime(data["acquisitionDate"], "%b/%d/%Y")
