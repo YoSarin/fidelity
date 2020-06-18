@@ -89,7 +89,7 @@ def columnName(col):
 
 def SoldSharesRows(lots, source, ws, f, startingRow):
     row = startingRow
-    ws.merge_range("B%s:%s%s" % (row + 0 + 1, columnName(len(lots)), row + 0 + 1), _(source.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
+    ws.merge_range("B%s:%s%s" % (row + 0 + 1, columnName(len(lots)), row + 0 + 1), _("Stocks sell"), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
     ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
     ws.write(row+2, 0, _(u"Počet akcií"))
     ws.write(row+3, 0, _(u"Nákupní cena akcie (USD)"))
