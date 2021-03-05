@@ -14,8 +14,8 @@ def groupByDate(lots):
         if lot.acquisitionDate in output and round(lot.pricePaid, 2) == round(output[lot.acquisitionDate].pricePaid, 2):
             output[lot.acquisitionDate].quantity += lot.quantity
         elif lot.acquisitionDate in output:
-            print lot.csv()
-            print output[lot.acquisitionDate].csv()
+            print(lot.csv())
+            print(output[lot.acquisitionDate].csv())
             raise Exception("Two acquision at same date (%s), with different price per share (%s != %s)" % (lot.acquisitionDate, lot.pricePaid, output[lot.acquisitionDate].pricePaid))
         else:
             output[lot.acquisitionDate] = deepcopy(lot)
@@ -90,16 +90,16 @@ def columnName(col):
 def SoldSharesRows(lots, source, ws, f, startingRow):
     row = startingRow
     ws.merge_range("B%s:%s%s" % (row + 0 + 1, columnName(len(lots)), row + 0 + 1), _("Stocks sell"), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
-    ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
-    ws.write(row+2, 0, _(u"Počet akcií"))
-    ws.write(row+3, 0, _(u"Nákupní cena akcie (USD)"))
-    ws.write(row+4, 0, _(u"Prodejní cena akcie (USD)"))
-    ws.write(row+5, 0, _(u"Příjem v USD"))
-    ws.write(row+6, 0, _(u"Datum prodeje"))
-    ws.write(row+7, 0, _(u"Datum nákupu"))
-    ws.write(row+8, 0, _(u"Je danitelné"))
-    ws.write(row+9, 0, _(u"Použitý kurz CZK/USD"))
-    ws.write(row+10, 0, _(u"Zisk v Kč"))
+    ws.write(row+1, 0, _("Přepočty měn a zisků"))
+    ws.write(row+2, 0, _("Počet akcií"))
+    ws.write(row+3, 0, _("Nákupní cena akcie (USD)"))
+    ws.write(row+4, 0, _("Prodejní cena akcie (USD)"))
+    ws.write(row+5, 0, _("Příjem v USD"))
+    ws.write(row+6, 0, _("Datum prodeje"))
+    ws.write(row+7, 0, _("Datum nákupu"))
+    ws.write(row+8, 0, _("Je danitelné"))
+    ws.write(row+9, 0, _("Použitý kurz CZK/USD"))
+    ws.write(row+10, 0, _("Zisk v Kč"))
     col = 1
     colLetter = columnName(col)
     for lot in lots:
@@ -133,15 +133,15 @@ def SoldSharesRows(lots, source, ws, f, startingRow):
 def SharesRows(lots, source, ws, f, startingRow):
     row = startingRow
     ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots)), row + 0 + 1), _(source.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
-    ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
-    ws.write(row+2, 0, _(u"Počet akcií"))
-    ws.write(row+3, 0, _(u"Obchodní cena akcie (USD)"))
-    ws.write(row+4, 0, _(u"Nákupní cena akcie (USD)"))
-    ws.write(row+5, 0, _(u"Příjem v USD"))
-    ws.write(row+6, 0, _(u"Strženo na US daních"))
-    ws.write(row+7, 0, _(u"Datum"))
-    ws.write(row+8, 0, _(u"Použitý kurz CZK/USD"))
-    ws.write(row+9, 0, _(u"Příjem v Kč"))
+    ws.write(row+1, 0, _("Přepočty měn a zisků"))
+    ws.write(row+2, 0, _("Počet akcií"))
+    ws.write(row+3, 0, _("Obchodní cena akcie (USD)"))
+    ws.write(row+4, 0, _("Nákupní cena akcie (USD)"))
+    ws.write(row+5, 0, _("Příjem v USD"))
+    ws.write(row+6, 0, _("Strženo na US daních"))
+    ws.write(row+7, 0, _("Datum"))
+    ws.write(row+8, 0, _("Použitý kurz CZK/USD"))
+    ws.write(row+9, 0, _("Příjem v Kč"))
     col = 1
     colLetter = columnName(col)
     for lot in lots:
@@ -177,13 +177,13 @@ def SharesRows(lots, source, ws, f, startingRow):
 def DividentsRows(lots, source, ws, f, startingRow):
     row = startingRow
     ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots) + 1), row + 0 + 1), _(Source.DIVIDEND.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
-    ws.write(row+1, 0, _(u"Přepočty měn a zisků"))
-    ws.write(row+2, 0, _(u"Příjem v USD"))
-    ws.write(row+3, 0, _(u"Strženo na US daních"))
-    ws.write(row+4, 0, _(u"Datum"))
-    ws.write(row+5, 0, _(u"Použitý kurz CZK/USD"))
-    ws.write(row+6, 0, _(u"Strženo na US daních (CZK)"))
-    ws.write(row+7, 0, _(u"Příjem v Kč (před US zdaněním)"))
+    ws.write(row+1, 0, _("Přepočty měn a zisků"))
+    ws.write(row+2, 0, _("Příjem v USD"))
+    ws.write(row+3, 0, _("Strženo na US daních"))
+    ws.write(row+4, 0, _("Datum"))
+    ws.write(row+5, 0, _("Použitý kurz CZK/USD"))
+    ws.write(row+6, 0, _("Strženo na US daních (CZK)"))
+    ws.write(row+7, 0, _("Příjem v Kč (před US zdaněním)"))
 
     col = 1
     colLetter = columnName(col)
@@ -247,9 +247,9 @@ class FormatLibrary:
         Format.Orange: {'pattern': 1, 'bg_color': '#FF9922', 'font_color': '#666600'},
         Format.Gray: { "bg_color": "#999999", "pattern": 1,"font_color": "#ffffff" },
         Format.Bold: { 'bold': True },
-        Format.CZK: {'num_format': u'# ### ##0.00 Kč'},
-        Format.USD: {'num_format': u'$# ### ##0.00'},
-        Format.CZK_USD: {'num_format': u'# ### ##0.00'},
+        Format.CZK: {'num_format': '# ### ##0.00 Kč'},
+        Format.USD: {'num_format': '$# ### ##0.00'},
+        Format.CZK_USD: {'num_format': '# ### ##0.00'},
         Format.Date: {'num_format': 'yyyy-mm-dd'},
         Format.DoubleBox: {'border': 6},
         Format.Result: {'top': 1},

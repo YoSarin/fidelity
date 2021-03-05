@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import argparse
 import os
@@ -47,7 +47,7 @@ try:
     args = parser.parse_args()
 
     if args.action == "test":
-        print "nothing to do"
+        print("nothing to do")
     else:
         cleanCache()
 
@@ -72,11 +72,11 @@ try:
             reloadCacheFromFidelity(args.username, password, args.accountID, args.securityID)
         elif args.action == "csv":
             open, closed = fetchData()
-            print "\n".join(open.BoughtInYear(args.year).csv() + closed.BoughtInYear(args.year).csv())
-            print "\n".join(closed.SoldInYear(args.year).csv())
+            print(("\n".join(open.BoughtInYear(args.year).csv() + closed.BoughtInYear(args.year).csv())))
+            print(("\n".join(closed.SoldInYear(args.year).csv())))
 
 except ValueError as e:
-    print "Troubles with fetching data - maybe too many attemps? Give fidelity a rest ;)"
-    print traceback.print_exc()
+    print("Troubles with fetching data - maybe too many attemps? Give fidelity a rest ;)")
+    print((traceback.print_exc()))
 except KeyboardInterrupt:
-    print "You cancelled an op"
+    print("You cancelled an op")

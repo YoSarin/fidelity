@@ -1,4 +1,4 @@
-from lots import *
+from .lots import *
 from datetime import datetime
 
 def cleanCache(force = False):

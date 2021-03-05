@@ -72,7 +72,7 @@ class Lot:
             url = "http://www.cnb.cz/cs/financni_trhy/devizovy_trh/kurzy_devizoveho_trhu/denni_kurz.txt?date=%s" % strDate
             courses = requests.get(url)
 
-            for dayCourse in courses.content.split("\n"):
+            for dayCourse in courses.text.split('\n'):
                 fields = dayCourse.split('|')
                 if len(fields) < 5:
                     continue
@@ -199,7 +199,7 @@ class Lots:
         totalAcquisitionPrice = additionalStocks*Lot.CurrentMSFTPrice()*czkCourse
         quantity = additionalStocks
         avgBuyPrice = 0
-        print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+        print("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
             "{:10s}".format("Acq. date"),
             "{:10s}".format("Quantity (pcs)"),
             "{:20s}".format("Selling price (czk)"),
@@ -207,9 +207,9 @@ class Lots:
             "{:13s}".format("Taxes (czk)"),
             "{:30s}".format("Income after taxation (czk)"),
             "{:20s}".format("Buy/Sell"),
-        )
+        ))
         if additionalStocks > 0:
-            print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+            print("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
                 "{:10s}".format("N/A"),
                 "{:10.0f}".format(quantity),
                 "{:17.2f}".format(totalTotal),
@@ -217,13 +217,13 @@ class Lots:
                 "{:10.2f}".format(totalTaxes),
                 "{:27.2f}".format((totalTotal-totalTaxes)),
                 "{:7.2f}/{:.2f}".format(sellingPrice, sellingPrice),
-            )
+            ))
             avgBuyPrice = sellingPrice
         for lot in self.lots:
             total = lot.quantity * sellingPrice * czkCourse
             taxes = lot.TaxesIfSold(sellingPrice, czkCourse, sellingDate, minimalYearsToAvoidTaxes, tax)
             acquisition = lot.quantity * lot.priceReal * lot.czkUsdAtAcquisitionDate()
-            print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+            print("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
                 "{:10s}".format(lot.acquisitionDate.strftime("%Y-%m-%d")),
                 "{:10.0f}".format(lot.quantity),
                 "{:17.2f}".format(total),
@@ -231,7 +231,7 @@ class Lots:
                 "{:10.2f}".format(taxes),
                 "{:27.2f}".format((total-taxes)),
                 "{:7.2f}/{:.2f}".format(lot.priceReal, sellingPrice),
-            )
+            ))
 
             avgBuyPrice = ((avgBuyPrice*quantity) + (lot.priceReal*lot.quantity))/(quantity+lot.quantity)
 
@@ -239,8 +239,8 @@ class Lots:
             totalTaxes += taxes
             totalAcquisitionPrice += acquisition
             quantity += lot.quantity
-        print
-        print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+        print()
+        print("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
             "{:10s}".format("-"),
             "{:10.0f}".format(quantity),
             "{:17.2f}".format(totalTotal),
@@ -248,7 +248,7 @@ class Lots:
             "{:10.2f}".format(totalTaxes),
             "{:27.2f}".format((totalTotal-totalTaxes)),
             "{:7.2f}/{:.2f}".format(avgBuyPrice, sellingPrice),
-        )
+        ))
 
     def csv(self):
         out = []

@@ -30,7 +30,7 @@ def reloadCacheFromFidelity(username, password, accountID, securityID):
         )
 
         if login.status_code != 200:
-            print "Login failed!" 
+            print("Login failed!") 
             return False
 
         openLotsRaw = s.post(
