@@ -9,7 +9,7 @@ closedLotsFileName = "data/closed_lots.json"
 def fetchData():
     openData = closedData = None
     with open(openLotsFileName, "r") as file: 
-        openData = Lots(json.load(file)["data"]["openLotsRecords"])
+        openData = Lots(json.load(file)["openLots"])
         
     with open(closedLotsFileName, "r") as file: 
         closedData = ClosedLots(json.load(file)["data"]["closedLotsRecords"])

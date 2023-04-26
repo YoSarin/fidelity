@@ -3,6 +3,8 @@ import requests
 from enum import Enum
 import json
 import os.path
+from azure.keyvault.secrets import SecretClient
+from azure.identity import DefaultAzureCredential
 
 class Source(Enum):
     ALL = "all"
@@ -21,40 +23,57 @@ class Lot:
     _cachedCoursesFile = "./data/courses.cache"
     _cachedStockPrices = None
     _cachedStockPriceFile = "./data/stocks.cache"
+    _data = None
 
     def __init__(self, data):
-        self.acquisitionDate = datetime.strptime(data["acquisitionDate"], "%b/%d/%Y")
-        self.quantity = float(data["quantity"].replace(",", "."))
+        self._data = data
+        self.acquisitionDate = self.dateAcquired()
+        self.quantity = self.lotQuantity()
         self._czkUsdAtAcquisitionDate = None
-        self.source = Source.UNKNOWN
-        if "shareSource" in data:
-            if data["shareSource"] == "ESPP":
-                self.source = Source.ESPP
-            elif data["shareSource"] == "DO":
-                self.source = Source.AWARD
-            else:
-                self.source = Source.DIVIDEND
-        else:
-            fmv = Lot.MSFTPriceAtDate(datetime.strptime(data["acquisitionDate"], "%b/%d/%Y"))*self.quantity
-            cost = float(data["costBasis"]["basisAmount"].replace(",", ""))
-            ratio = round(cost/fmv, 1)
-            if ratio == 0.9:
-                self.source = Source.ESPP
-            elif self.acquisitionDate.month in [3, 6, 9, 12] and 5 < self.acquisitionDate.day < 25:
-                # dividends comes at march, june, september and december, somewhat around middle of the month
-                self.source = Source.DIVIDEND
-            else:
-                # awards are granted at february, may, august and november, last day of month. When there are hollidays at the end of the month, they will come first working day after that
-                self.source = Source.AWARD
-
-            # print self.acquisitionDate, self.quantity, ratio, self.source.value
+        self.source = self.shareSource()
 
         if self.isESPP():
-            self.pricePaid = float(data["costBasis"]["basisAmount"].replace(",", ""))/self.quantity
+            self.pricePaid = self.costBasis()/self.quantity
             self.priceReal = 100 * (self.pricePaid / 90)
         elif self.isAward() or self.isBoughtByDivident():
             self.pricePaid = 0
-            self.priceReal = float(data["costBasis"]["basisAmount"].replace(",", ""))/self.quantity
+            self.priceReal = self.costBasis()/self.quantity
+
+    def dateAcquired(self):
+        return datetime.strptime(self._data["dateAcquired"], "%b-%d-%Y")
+
+    def lotQuantity(self):
+        return float(self._data["lotQuantity"].replace(",", "."))
+
+    def costBasis(self):
+        return float(self._data["assetCurrencyData"]["costBasis"]["value"])
+
+    def marketValue(self):
+        return float(self._data["assetCurrencyData"]["marketValue"]["value"])
+
+    def shareSource(self):
+        source = Source.UNKNOWN
+        if "shareSource" in self._data:
+            if self._data["shareSource"] == "SP":
+                source = Source.ESPP
+            elif self._data["shareSource"] == "DO":
+                source = Source.AWARD
+            else:
+                source = Source.DIVIDEND
+        else:
+            fmv = self.marketValue()
+            cost = self.costBasis()
+            ratio = round(cost/fmv, 1)
+            if ratio == 0.9:
+                source = Source.ESPP
+            elif self.acquisitionDate.month in [3, 6, 9, 12] and 5 < self.acquisitionDate.day < 25:
+                # dividends comes at march, june, september and december, somewhat around middle of the month
+                source = Source.DIVIDEND
+            else:
+                # awards are granted at february, may, august and november, last day of month. When there are hollidays at the end of the month, they will come first working day after that
+                source = Source.AWARD
+        
+        return source
 
     @staticmethod
     def Headers():
@@ -100,14 +119,28 @@ class Lot:
     def MSFTPriceAtDate(date):
         return Lot.MSFTPrices()[date.strftime("%Y-%m-%d")]
 
+    # just to avoid storing API key in the code directly
+    # anyone who wants to use the script needs to get their own key
+    @staticmethod
+    def polygonApiKey():
+        keyVaultUri = "https://fidelity.vault.azure.net/"
+        secretName = "polygon-io"
+
+        credential = DefaultAzureCredential()
+        client = SecretClient(vault_url=keyVaultUri, credential=credential)
+        retrievedSecret = client.get_secret(secretName)
+        return retrievedSecret.value
+
     @staticmethod
     def MSFTPrices():
         if not Lot._cachedStockPrices:
             if not os.path.isfile(Lot._cachedStockPriceFile):
-                url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&outputsize=full&apikey=W3RCAR8GFCZPPJI6"
+                apiKey = Lot.polygonApiKey()
+                today = date.today()
+                url = "https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2016-01-01/" + today + "?adjusted=true&limit=400&apiKey=" + apiKey
                 stockData = json.loads(requests.get(url).content)
                 with open(Lot._cachedStockPriceFile, "w") as file:
-                    values = dict([(key, float(stockData["Time Series (Daily)"][key]["4. close"])) for key in stockData["Time Series (Daily)"]])
+                    values = dict([(datetime.utcfromtimestamp(int(r["t"])/1000).strftime('%Y-%m-%d'), float(r["c"])) for r in stockData["results"]])
                     file.write(json.dumps(values))
                     Lot._cachedStockPrices = values
             else:
@@ -166,6 +199,18 @@ class ClosedLot(Lot):
         self.sellDate = datetime.strptime(data["holdingPeriodDate"], "%b/%d/%Y")
         self.sellPrice = float(data["proceeds"]["proceeds"].replace(",", ""))/self.quantity
         self._czkUsdAtSellDate = None
+
+    def dateAcquired(self):
+        return datetime.strptime(self._data["acquisitionDate"], "%b/%d/%Y")
+
+    def lotQuantity(self):
+        return float(self._data["quantity"].replace(",", "."))
+
+    def costBasis(self):
+        return float(self._data["costBasis"]["basisAmount"].replace(",", ""))
+
+    def shareSource(self):
+        return Source.UNKNOWN
 
     def czkUsdAtSellDate(self):
         if self._czkUsdAtSellDate == None:

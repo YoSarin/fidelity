@@ -7,7 +7,7 @@ global_lang = "cs_cz"
 
 filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'translations.json')
 
-with open(filename) as f:
+with open(filename, mode="r", encoding="utf-8") as f:
     data = f.read()
 
 strings = json.loads(data)
