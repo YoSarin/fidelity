@@ -1,18 +1,24 @@
 import requests
 from lib.lots import Lots, ClosedLots
 import json
-import os.path
+from datetime import datetime
 
-openLotsFileName = "data/open_lots.json"
-closedLotsFileName = "data/closed_lots.json"
+year = datetime.now().year -1
+
+openLotsFileName = f"data/{year}.open_lots.json"
+closedLotsFileName = f"data/{year}.closed_lots.json"
 
 def fetchData():
     openData = closedData = None
     with open(openLotsFileName, "r") as file: 
         openData = Lots(json.load(file)["openLots"])
         
-    with open(closedLotsFileName, "r") as file: 
-        closedData = ClosedLots(json.load(file)["data"]["closedLotsRecords"])
+    with open(closedLotsFileName, "r") as file:
+        data = json.load(file)
+        if "data" in data:
+            closedData = ClosedLots(data["data"]["closedLotsRecords"])
+        else:
+            closedData = ClosedLots(data["closedLots"])
 
     return (openData, closedData)
 

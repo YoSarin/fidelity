@@ -131,6 +131,10 @@ def SoldSharesRows(lots, source, ws, f, startingRow):
 
 
 def SharesRows(lots, source, ws, f, startingRow):
+    color = Format.Green
+    if source == Source.ESPP:
+        color = Format.Blue
+
     row = startingRow
     ws.merge_range("B%s:%s%s" % (row + 0 + 1, chr(ord('A') + len(lots)), row + 0 + 1), _(source.value), f.F(Format.Top, Format.Right, Format.Left, Format.CenterText))
     ws.write(row+1, 0, _("Přepočty měn a zisků"))
@@ -138,10 +142,12 @@ def SharesRows(lots, source, ws, f, startingRow):
     ws.write(row+3, 0, _("Obchodní cena akcie (USD)"))
     ws.write(row+4, 0, _("Nákupní cena akcie (USD)"))
     ws.write(row+5, 0, _("Příjem v USD"))
-    ws.write(row+6, 0, _("Strženo na US daních"))
-    ws.write(row+7, 0, _("Datum"))
-    ws.write(row+8, 0, _("Použitý kurz CZK/USD"))
-    ws.write(row+9, 0, _("Příjem v Kč"))
+    ws.write(row+6, 0, _("Příjem v CZK"))
+    ws.write(row+7, 0, _("Náklady v CZK"))
+    ws.write(row+8, 0, _("Strženo na US daních"))
+    ws.write(row+9, 0, _("Datum"))
+    ws.write(row+10, 0, _("Použitý kurz CZK/USD"))
+    ws.write(row+11, 0, _("Zisk v CZK"))
     col = 1
     colLetter = columnName(col)
     for lot in lots:
@@ -156,15 +162,28 @@ def SharesRows(lots, source, ws, f, startingRow):
         ws.write(row+2, col, lot.quantity, f.F(border))
         ws.write(row+3, col, lot.priceReal, f.F(Format.USD, border))
         ws.write(row+4, col, lot.pricePaid, f.F(Format.USD, border))
-        ws.write(row+5, col, "=%s%s*(%s%s-%s%s)" % (colLetter, row+2+1, colLetter, row+3+1, colLetter, row+4+1), f.F(Format.USD, border))
-        ws.write(row+6, col, 0, f.F(Format.USD, border))
-        ws.write(row+7, col, lot.acquisitionDate, f.F(Format.Date, border))
-        ws.write(row+8, col, lot.czkUsdAtAcquisitionDate(), f.F(Format.CZK_USD, border))
-        finalFormat = f.F(Format.Green, Format.CZK, Format.Result, Format.Bottom, border)
-        if source == Source.ESPP:
-            finalFormat = f.F(Format.Blue, Format.CZK, Format.Result, Format.Bottom, border)
-        ws.write(row+9, col, "=%s%s*%s%s" % (colLetter, row+5+1, colLetter, row+8+1), finalFormat)
+        ws.write(row+5, col, "=%s%s*%s%s" % (colLetter, row+2+1, colLetter, row+3+1), f.F(Format.USD, border))
+        ws.write(row+6, col, "=%s%s*%s%s" % (colLetter, row+5+1, colLetter, row+10+1), f.F(Format.CZK, border))
+        ws.write(row+7, col, "=%s%s*%s%s*%s%s" % (colLetter, row+2+1, colLetter, row+4+1, colLetter, row+10+1), f.F(Format.CZK, border))
+        ws.write(row+8, col, 0, f.F(Format.USD, border))
+        ws.write(row+9, col, lot.acquisitionDate, f.F(Format.Date, border))
+        ws.write(row+10, col, lot.czkUsdAtAcquisitionDate(), f.F(Format.CZK_USD, border))
+        finalFormat = f.F(color, Format.CZK, Format.Result, Format.Bottom, border)
+        ws.write(row+11, col, "=%s%s-%s%s" % (colLetter, row+6+1, colLetter, row+7+1), finalFormat)
         col += 1
+
+    finalFormat = f.F(color, Format.CZK, Format.Result, Format.Bottom, Format.Right)
+    ws.write(row+1, col, _("Total"), f.F(Format.Right, color))
+    ws.write(row+2, col, "=SUM(B%s:%s%s)" % (row+2+1, colLetter, row+2+1), f.F(Format.USD, Format.Right, color))
+    ws.write(row+3, col, "", f.F(Format.USD, Format.Right, color))
+    ws.write(row+4, col, "", f.F(Format.USD, Format.Right, color))
+    ws.write(row+5, col, "=SUM(B%s:%s%s)" % (row+5+1, colLetter, row+5+1), f.F(Format.USD, Format.Right, color))
+    ws.write(row+6, col, "=SUM(B%s:%s%s)" % (row+6+1, colLetter, row+6+1), f.F(Format.CZK, Format.Right, color))
+    ws.write(row+7, col, "=SUM(B%s:%s%s)" % (row+7+1, colLetter, row+7+1), f.F(Format.CZK, Format.Right, color))
+    ws.write(row+8, col, "=SUM(B%s:%s%s)" % (row+8+1, colLetter, row+8+1), f.F(Format.USD, Format.Right, color))
+    ws.write(row+9, col, "", f.F(Format.Date, Format.Right, color))
+    ws.write(row+10, col, "", f.F(Format.CZK_USD, Format.Right, color))
+    ws.write(row+11, col, "=SUM(B%s:%s%s)" % (row+11+1, colLetter, row+11+1), finalFormat)
 
     range = "B%s:%s%s" % (row+9+1, colLetter, row+9+1)
     if source == Source.ESPP:
@@ -172,7 +191,7 @@ def SharesRows(lots, source, ws, f, startingRow):
     else:
         ws.write('B5', "=SUM(%s)" % range, f.F(Format.Green, Format.CZK))
 
-    return row + 11
+    return row + 13
 
 def DividentsRows(lots, source, ws, f, startingRow):
     row = startingRow
@@ -205,14 +224,14 @@ def DividentsRows(lots, source, ws, f, startingRow):
         ws.write(row+7, col, "=%s%s*%s%s" % (colLetter, row+2+1, colLetter, row+5+1), finalFormat)
         col += 1
 
-        ws.write(row+1, col, _("Total"), f.F(Format.Right, Format.Yellow))
-        ws.write(row+2, col, "=SUM(B%s:%s%s)" % (row+2+1, colLetter, row+2+1), f.F(Format.USD, Format.Right, Format.Yellow))
-        ws.write(row+3, col, "=SUM(B%s:%s%s)" % (row+3+1, colLetter, row+3+1), f.F(Format.USD, Format.Right, Format.Yellow))
-        ws.write(row+4, col, "", f.F(Format.Date, Format.Right, Format.Yellow))
-        ws.write(row+5, col, "", f.F(Format.CZK_USD, Format.Right, Format.Yellow))
-        ws.write(row+6, col, "=SUM(B%s:%s%s)" % (row+6+1, colLetter, row+6+1), f.F(Format.CZK, Format.Right, Format.Yellow))
-        finalFormat = f.F(Format.Yellow, Format.CZK, Format.Result, Format.Bottom, Format.Right)
-        ws.write(row+7, col, "=SUM(B%s:%s%s)" % (row+7+1, colLetter, row+7+1), finalFormat)
+    ws.write(row+1, col, _("Total"), f.F(Format.Right, Format.Yellow))
+    ws.write(row+2, col, "=SUM(B%s:%s%s)" % (row+2+1, colLetter, row+2+1), f.F(Format.USD, Format.Right, Format.Yellow))
+    ws.write(row+3, col, "=SUM(B%s:%s%s)" % (row+3+1, colLetter, row+3+1), f.F(Format.USD, Format.Right, Format.Yellow))
+    ws.write(row+4, col, "", f.F(Format.Date, Format.Right, Format.Yellow))
+    ws.write(row+5, col, "", f.F(Format.CZK_USD, Format.Right, Format.Yellow))
+    ws.write(row+6, col, "=SUM(B%s:%s%s)" % (row+6+1, colLetter, row+6+1), f.F(Format.CZK, Format.Right, Format.Yellow))
+    finalFormat = f.F(Format.Yellow, Format.CZK, Format.Result, Format.Bottom, Format.Right)
+    ws.write(row+7, col, "=SUM(B%s:%s%s)" % (row+7+1, colLetter, row+7+1), finalFormat)
 
     range = "B%s:%s%s" % (row+7+1, colLetter, row+7+1)
     ws.write('B7', "=SUM(%s)" % (range), f.F(Format.Yellow, Format.CZK))
