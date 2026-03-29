@@ -210,7 +210,18 @@ class ClosedLot(Lot):
         return float(self._data["costBasis"]["basisAmount"].replace(",", ""))
 
     def shareSource(self):
-        return Source.UNKNOWN
+        grantType = self._data.get("shareSource") or self._data.get("grantType")
+        if grantType == "SP":
+            return Source.ESPP
+        elif grantType == "DO":
+            return Source.AWARD
+        elif grantType is not None:
+            return Source.DIVIDEND
+        # Fall back to date-based heuristic for DIVIDEND vs AWARD
+        acqDate = self.acquisitionDate
+        if acqDate.month in [3, 6, 9, 12] and 5 < acqDate.day < 25:
+            return Source.DIVIDEND
+        return Source.AWARD
 
     def czkUsdAtSellDate(self):
         if self._czkUsdAtSellDate == None:

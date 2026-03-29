@@ -1,4 +1,5 @@
 requests
+charset-normalizer --no-binary charset-normalizer
 xlsxwriter
 Enum34
 azure-identity

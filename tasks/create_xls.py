@@ -185,7 +185,7 @@ def SharesRows(lots, source, ws, f, startingRow):
     ws.write(row+10, col, "", f.F(Format.CZK_USD, Format.Right, color))
     ws.write(row+11, col, "=SUM(B%s:%s%s)" % (row+11+1, colLetter, row+11+1), finalFormat)
 
-    range = "B%s:%s%s" % (row+9+1, colLetter, row+9+1)
+    range = "B%s:%s%s" % (row+11+1, colLetter, row+11+1)
     if source == Source.ESPP:
         ws.write('B6', "=SUM(%s)" % range, f.F(Format.Blue, Format.CZK))
     else:

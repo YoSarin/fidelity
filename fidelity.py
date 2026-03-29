@@ -7,6 +7,59 @@ import traceback
 from datetime import datetime
 from lib.data_source import *
 from lib.clean_cache import *
+from lib.lots import Source
+
+
+def PrintSummary(boughtOpen, boughtClosed, sold):
+    sep = "-" * 80
+    print("\n" + sep)
+    print("  SUMMARY")
+    print(sep)
+
+    for source in Source.List():
+        lots = boughtOpen.FilterBySource(source).lots + boughtClosed.FilterBySource(source).lots
+        if not lots:
+            continue
+
+        qty = sum(l.quantity for l in lots)
+
+        if source == Source.DIVIDEND:
+            # 15% US withholding already deducted — gross it back up
+            net_usd = sum(l.quantity * (l.priceReal - l.pricePaid) for l in lots)
+            gross_usd = net_usd * (100 / 85)
+            us_tax_czk = sum((l.quantity * (l.priceReal - l.pricePaid) * (100/85) * 0.15) * l.czkUsdAtAcquisitionDate() for l in lots)
+            gain_czk = sum(l.quantity * (l.priceReal - l.pricePaid) * (100/85) * l.czkUsdAtAcquisitionDate() for l in lots)
+            print(f"\n  {source.value}")
+            print(f"    Shares (pcs):           {qty:>12.4f}")
+            print(f"    Gross income (CZK):     {gain_czk:>12.2f}")
+            print(f"    US taxes withheld (CZK):{us_tax_czk:>12.2f}")
+        else:
+            gain_czk = sum(l.quantity * l.priceReal * l.czkUsdAtAcquisitionDate() for l in lots)
+            cost_czk = sum(l.quantity * l.pricePaid * l.czkUsdAtAcquisitionDate() for l in lots)
+            print(f"\n  {source.value}")
+            print(f"    Shares (pcs):           {qty:>12.4f}")
+            print(f"    Income (CZK):           {gain_czk:>12.2f}")
+            if source == Source.ESPP:
+                print(f"    Amount paid (CZK):      {cost_czk:>12.2f}")
+                print(f"    Benefit gain (CZK):     {gain_czk - cost_czk:>12.2f}")
+
+    # Sold shares
+    sold_lots = sold.lots
+    if sold_lots:
+        proceeds_czk = sum(l.quantity * l.sellPrice * l.czkUsdAtSellDate() for l in sold_lots)
+        cost_czk = sum(l.quantity * l.priceReal * l.czkUsdAtAcquisitionDate() for l in sold_lots)
+        taxable_gain = sum(
+            l.quantity * l.sellPrice * l.czkUsdAtSellDate() - l.quantity * l.priceReal * l.czkUsdAtAcquisitionDate()
+            for l in sold_lots if l.TaxApplicable()
+        )
+        print(f"\n  Sold shares")
+        print(f"    Shares sold (pcs):      {sum(l.quantity for l in sold_lots):>12.4f}")
+        print(f"    Proceeds (CZK):         {proceeds_czk:>12.2f}")
+        print(f"    Cost basis (CZK):       {cost_czk:>12.2f}")
+        print(f"    Taxable gain (CZK):     {taxable_gain:>12.2f}")
+
+    print("\n" + sep + "\n")
+
 
 
 try:
@@ -56,6 +109,7 @@ try:
 
             from tasks.create_xls import CreateXLS
             CreateXLS(open.BoughtInYear(args.year), closed.BoughtInYear(args.year), closed.SoldInYear(args.year), "taxes_" + str(args.year), args.gross_income, args.total_premium)
+            PrintSummary(open.BoughtInYear(args.year), closed.BoughtInYear(args.year), closed.SoldInYear(args.year))
         elif args.action == "simulate_sell":
             open, closed = fetchData()
 
